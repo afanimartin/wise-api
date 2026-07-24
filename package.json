@@ -13,7 +13,7 @@
     "dev": "npm run dev -w @wise/api",
     "start": "npm run start -w @wise/api",
     "test": "vitest run",
-    "test:db": "RUN_DB_TESTS=1 vitest run apps/api/src/modules/wallet/wallet.routes.test.ts",
+    "test:db": "RUN_DB_TESTS=1 vitest run apps/api/src/modules/auth/auth.routes.test.ts apps/api/src/modules/wallet/wallet.routes.test.ts",
     "typecheck": "tsc -b",
     "db:migrate": "node scripts/migrate.mjs",
     "db:migrate:remote": "bash scripts/migrate-remote.sh",

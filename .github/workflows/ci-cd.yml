@@ -1,0 +1,112 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 22
+  PROJECT_ID: wise-money-499410
+  REGION: africa-south1
+  REPOSITORY: wise-backend
+  SERVICE: wise-api
+  FIREBASE_PROJECT_ID: wise-money-499410
+  CORS_ORIGINS: ${{ vars.CORS_ORIGINS || '*' }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: wise
+          POSTGRES_USER: wise
+          POSTGRES_PASSWORD: wise
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wise -d wise"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://wise:wise@localhost:5432/wise
+      TEST_DATABASE_URL: postgres://wise:wise@localhost:5432/wise
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Run database migrations
+        run: npm run db:migrate
+
+      - name: Run database route tests
+        run: npm run test:db
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Run production migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run db:migrate
+
+      - name: Build and deploy Cloud Run
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          WEBHOOK_SIGNATURE_SECRET: ${{ secrets.WEBHOOK_SIGNATURE_SECRET }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+          REGION: ${{ env.REGION }}
+          REPOSITORY: ${{ env.REPOSITORY }}
+          SERVICE: ${{ env.SERVICE }}
+          FIREBASE_PROJECT_ID: ${{ env.FIREBASE_PROJECT_ID }}
+          CORS_ORIGINS: ${{ env.CORS_ORIGINS }}
+          GCLOUD: gcloud
+        run: npm run deploy:cloud-run

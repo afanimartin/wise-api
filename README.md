@@ -87,6 +87,32 @@ Max instances: 5
 Concurrency: 40
 ```
 
+## CI/CD
+
+GitHub Actions validates the backend on pull requests and pushes to `main`.
+
+On pushes to `main`, the deploy job:
+
+- runs production database migrations
+- builds and pushes a Docker image to Artifact Registry
+- deploys the image to Cloud Run
+
+Required GitHub repository secrets:
+
+```text
+GCP_SA_KEY
+DATABASE_URL
+WEBHOOK_SIGNATURE_SECRET
+```
+
+Optional GitHub repository variable:
+
+```text
+CORS_ORIGINS
+```
+
+`GCP_SA_KEY` should be a JSON service account key for an account that can run Cloud Build, push to Artifact Registry, deploy Cloud Run, and update Secret Manager secret versions.
+
 ## Wallet Account API
 
 Wallet account routes require a Firebase ID token:
