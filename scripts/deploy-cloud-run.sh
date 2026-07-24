@@ -23,12 +23,14 @@ fi
 
 "${GCLOUD}" config set project "${PROJECT_ID}" >/dev/null
 
-"${GCLOUD}" services enable \
-  run.googleapis.com \
-  artifactregistry.googleapis.com \
-  cloudbuild.googleapis.com \
-  secretmanager.googleapis.com \
-  --project "${PROJECT_ID}"
+if [ "${SKIP_GCP_SERVICE_ENABLE:-0}" != "1" ]; then
+  "${GCLOUD}" services enable \
+    run.googleapis.com \
+    artifactregistry.googleapis.com \
+    cloudbuild.googleapis.com \
+    secretmanager.googleapis.com \
+    --project "${PROJECT_ID}"
+fi
 
 if ! "${GCLOUD}" artifacts repositories describe "${REPOSITORY}" \
   --location "${REGION}" \

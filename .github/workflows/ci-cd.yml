@@ -121,4 +121,5 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ env.FIREBASE_PROJECT_ID }}
           CORS_ORIGINS: ${{ env.CORS_ORIGINS }}
           GCLOUD: gcloud
+          SKIP_GCP_SERVICE_ENABLE: "1"
         run: npm run deploy:cloud-run
