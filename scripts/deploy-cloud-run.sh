@@ -32,7 +32,7 @@ if [ "${SKIP_GCP_SERVICE_ENABLE:-0}" != "1" ]; then
     --project "${PROJECT_ID}"
 fi
 
-if ! "${GCLOUD}" artifacts repositories describe "${REPOSITORY}" \
+if [ "${SKIP_ARTIFACT_REPOSITORY_CREATE:-0}" != "1" ] && ! "${GCLOUD}" artifacts repositories describe "${REPOSITORY}" \
   --location "${REGION}" \
   --project "${PROJECT_ID}" >/dev/null 2>&1; then
   "${GCLOUD}" artifacts repositories create "${REPOSITORY}" \

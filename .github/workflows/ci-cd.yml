@@ -122,4 +122,5 @@ jobs:
           CORS_ORIGINS: ${{ env.CORS_ORIGINS }}
           GCLOUD: gcloud
           SKIP_GCP_SERVICE_ENABLE: "1"
+          SKIP_ARTIFACT_REPOSITORY_CREATE: "1"
         run: npm run deploy:cloud-run
