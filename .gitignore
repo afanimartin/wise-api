@@ -1,0 +1,22 @@
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+dist/
+coverage/
+.turbo/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# GCP / local credentials
+*.key.json
+service-account*.json
+
+# Old Dart artifacts
+.dart_tool/
+.packages
+pubspec_overrides.yaml

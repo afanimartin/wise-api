@@ -1,0 +1,38 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "wisebackend_flutter",
+            "cwd": "${workspaceFolder}/wisebackend_flutter",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "wisebackend_server",
+            "cwd": "${workspaceFolder}/wisebackend_server",
+            "request": "launch",
+            "type": "dart",
+            "preLaunchTask": "docker_compose_up",
+            "program": "bin/main.dart",
+            "env": {
+                "SERVERPOD_PASSWORD_database": "HU7g86LQC8ARs-nsEGqCufh0axEZtbLK"
+            },
+            "args": [
+                "--apply-migrations"
+            ]
+        }
+    ],
+    "compounds": [
+        {
+            "name": "wisebackend (full stack)",
+            "configurations": [
+                "wisebackend_server",
+                "wisebackend_flutter"
+            ],
+            "presentation": {
+                "order": 1
+            }
+        }
+    ]
+}

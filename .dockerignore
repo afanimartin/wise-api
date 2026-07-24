@@ -1,0 +1,17 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.git
+.github
+.next
+node_modules
+coverage
+dist
+apps/api/dist
+apps/functions/dist
+packages/contracts/dist
+packages/database/dist
+*.tsbuildinfo
+**/*.tsbuildinfo
+firebase-debug.log
