@@ -123,4 +123,5 @@ jobs:
           GCLOUD: gcloud
           SKIP_GCP_SERVICE_ENABLE: "1"
           SKIP_ARTIFACT_REPOSITORY_CREATE: "1"
+          SKIP_SECRET_UPSERT: "1"
         run: npm run deploy:cloud-run

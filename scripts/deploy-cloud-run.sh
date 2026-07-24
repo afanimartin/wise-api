@@ -58,8 +58,10 @@ upsert_secret() {
   fi
 }
 
-upsert_secret "DATABASE_URL" "${DATABASE_URL}"
-upsert_secret "WEBHOOK_SIGNATURE_SECRET" "${WEBHOOK_SIGNATURE_SECRET}"
+if [ "${SKIP_SECRET_UPSERT:-0}" != "1" ]; then
+  upsert_secret "DATABASE_URL" "${DATABASE_URL}"
+  upsert_secret "WEBHOOK_SIGNATURE_SECRET" "${WEBHOOK_SIGNATURE_SECRET}"
+fi
 
 "${GCLOUD}" builds submit \
   --tag "${IMAGE}" \
