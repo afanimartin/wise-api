@@ -1,7 +1,15 @@
 import { readFile, readdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import pg from 'pg';
+import { config as loadDotenv } from 'dotenv';
+
+const envFilePath = process.env.WISE_ENV_FILE ?? process.env.DOTENV_CONFIG_PATH ?? '.env';
+
+if (!process.env.K_SERVICE && existsSync(envFilePath)) {
+  loadDotenv({ path: envFilePath });
+}
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

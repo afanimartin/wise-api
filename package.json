@@ -18,6 +18,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:migrate:remote": "bash scripts/migrate-remote.sh",
     "deploy:cloud-run": "bash scripts/deploy-cloud-run.sh",
+    "deploy:production": "node scripts/run-with-env.mjs .env.production bash scripts/deploy-cloud-run.sh",
     "lint": "tsc -b --pretty false"
   },
   "dependencies": {

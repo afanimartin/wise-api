@@ -6,10 +6,22 @@ PROJECT_ID="${PROJECT_ID:-xzerra-dev}"
 REGION="${REGION:-africa-south1}"
 REPOSITORY="${REPOSITORY:-wise-backend}"
 SERVICE="${SERVICE:-wise-api}"
+APP_ENV="${APP_ENV:-production}"
 SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-wise-api-sa@${PROJECT_ID}.iam.gserviceaccount.com}"
 FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID:-${PROJECT_ID}}"
+DEFAULT_WALLET_CURRENCY="${DEFAULT_WALLET_CURRENCY:-SSP}"
+DATABASE_URL_SECRET="${DATABASE_URL_SECRET:-DATABASE_URL}"
+WEBHOOK_SIGNATURE_SECRET_NAME="${WEBHOOK_SIGNATURE_SECRET_NAME:-WEBHOOK_SIGNATURE_SECRET}"
 IMAGE_TAG="${IMAGE_TAG:-$(date +%Y%m%d%H%M%S)}"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:${IMAGE_TAG}"
+
+case "${APP_ENV}" in
+  local|production) ;;
+  *)
+    echo "APP_ENV must be one of: local, production." >&2
+    exit 1
+    ;;
+esac
 
 if [ -z "${DATABASE_URL:-}" ]; then
   echo "DATABASE_URL is required. Use your Neon pooled connection string." >&2
@@ -59,8 +71,8 @@ upsert_secret() {
 }
 
 if [ "${SKIP_SECRET_UPSERT:-0}" != "1" ]; then
-  upsert_secret "DATABASE_URL" "${DATABASE_URL}"
-  upsert_secret "WEBHOOK_SIGNATURE_SECRET" "${WEBHOOK_SIGNATURE_SECRET}"
+  upsert_secret "${DATABASE_URL_SECRET}" "${DATABASE_URL}"
+  upsert_secret "${WEBHOOK_SIGNATURE_SECRET_NAME}" "${WEBHOOK_SIGNATURE_SECRET}"
 fi
 
 "${GCLOUD}" builds submit \
@@ -79,8 +91,8 @@ fi
   --min-instances 0 \
   --max-instances 5 \
   --timeout 30s \
-  --set-env-vars "NODE_ENV=production,LOG_LEVEL=info,FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID},CORS_ORIGINS=${CORS_ORIGINS:-*}" \
-  --set-secrets "DATABASE_URL=DATABASE_URL:latest,WEBHOOK_SIGNATURE_SECRET=WEBHOOK_SIGNATURE_SECRET:latest" \
+  --set-env-vars "^|^NODE_ENV=production|APP_ENV=${APP_ENV}|LOG_LEVEL=${LOG_LEVEL:-info}|FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}|CORS_ORIGINS=${CORS_ORIGINS:-*}|DEFAULT_WALLET_CURRENCY=${DEFAULT_WALLET_CURRENCY}" \
+  --set-secrets "DATABASE_URL=${DATABASE_URL_SECRET}:latest,WEBHOOK_SIGNATURE_SECRET=${WEBHOOK_SIGNATURE_SECRET_NAME}:latest" \
   --project "${PROJECT_ID}"
 
 "${GCLOUD}" run services describe "${SERVICE}" \

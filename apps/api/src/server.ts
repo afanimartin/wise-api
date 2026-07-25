@@ -38,9 +38,11 @@ export async function buildApp(
   );
   app.decorateRequest('auth', null);
   app.decorate('authenticate', async (request) => {
-    request.auth = await new AuthService(app.db, app.firebaseTokenVerifier).authenticate(
-      request.headers.authorization,
-    );
+    request.auth = await new AuthService(
+      app.db,
+      app.firebaseTokenVerifier,
+      config.defaultWalletCurrency,
+    ).authenticate(request.headers.authorization);
   });
 
   await app.register(helmet);
@@ -59,7 +61,7 @@ export async function buildApp(
     },
   });
 
-  if (config.nodeEnv !== 'production') {
+  if (config.appEnv === 'local') {
     await app.register(swaggerUi, { routePrefix: '/docs' });
   }
 

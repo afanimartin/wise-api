@@ -13,11 +13,13 @@ describeDb('auth routes', () => {
   beforeAll(async () => {
     app = await buildApp({
       nodeEnv: 'test',
+      appEnv: 'local',
       port: 0,
       logLevel: 'silent',
       databaseUrl,
       corsOrigins: ['http://localhost:3000'],
       firebaseProjectId: 'test-project',
+      defaultWalletCurrency: 'SSP',
     }, {
       firebaseTokenVerifier: {
         verifyIdToken: async () => ({

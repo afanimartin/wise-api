@@ -37,13 +37,35 @@ Required local environment values:
 
 ```env
 NODE_ENV=development
+APP_ENV=local
 PORT=8080
 LOG_LEVEL=info
 DATABASE_URL=postgres://wise:wise@localhost:5432/wise
 CORS_ORIGINS=http://localhost:3000
 WEBHOOK_SIGNATURE_SECRET=replace-me-local-dev
-FIREBASE_PROJECT_ID=xzerra-dev
+FIREBASE_PROJECT_ID=wise-money-499410
+DEFAULT_WALLET_CURRENCY=SSP
 ```
+
+## Environment Configuration
+
+Use `NODE_ENV` for Node/runtime behavior and `APP_ENV` for the Wise deployment lane:
+
+```text
+local       local Docker Postgres, Swagger UI enabled at /docs
+production  production-mode runtime, production Cloud Run service and DB
+```
+
+Templates:
+
+```text
+.env.example
+.env.production.example
+```
+
+Cloud Run reads production secrets from Secret Manager: `DATABASE_URL` and `WEBHOOK_SIGNATURE_SECRET`.
+
+Local runs load `.env` from disk. Cloud Run runs with `K_SERVICE` set, so the API does not read env files there; it uses only Cloud Run environment variables and Secret Manager secrets.
 
 ## Verification
 
@@ -69,11 +91,7 @@ DATABASE_URL='postgres://USER:PASSWORD@HOST.neon.tech/DB?sslmode=require' \
 Deploy the Docker API to Cloud Run:
 
 ```bash
-DATABASE_URL='postgres://USER:PASSWORD@HOST.neon.tech/DB?sslmode=require' \
-WEBHOOK_SIGNATURE_SECRET='replace-with-production-secret' \
-PROJECT_ID=xzerra-dev \
-REGION=africa-south1 \
-npm run deploy:cloud-run
+npm run deploy:production
 ```
 
 The Cloud Run service is deployed with:
@@ -91,13 +109,13 @@ Concurrency: 40
 
 GitHub Actions validates the backend on pull requests and pushes to `main`.
 
-On pushes to `main`, the deploy job:
+On pushes to `main`, the deploy job targets production. Manual runs also deploy production.
 
 - runs production database migrations
 - builds and pushes a Docker image to Artifact Registry
 - deploys the image to Cloud Run
 
-Required GitHub repository secrets:
+Required GitHub Environment secrets for `production`:
 
 ```text
 GCP_SA_KEY

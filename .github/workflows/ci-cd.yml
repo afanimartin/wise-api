@@ -12,9 +12,9 @@ env:
   PROJECT_ID: wise-money-499410
   REGION: africa-south1
   REPOSITORY: wise-backend
-  SERVICE: wise-api
   FIREBASE_PROJECT_ID: wise-money-499410
   CORS_ORIGINS: ${{ vars.CORS_ORIGINS || '*' }}
+  DEFAULT_WALLET_CURRENCY: SSP
 
 jobs:
   validate:
@@ -70,7 +70,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    environment: production
 
     steps:
       - name: Check out code
@@ -105,7 +106,7 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Run production migrations
+      - name: Run target database migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run db:migrate
@@ -117,11 +118,16 @@ jobs:
           PROJECT_ID: ${{ env.PROJECT_ID }}
           REGION: ${{ env.REGION }}
           REPOSITORY: ${{ env.REPOSITORY }}
-          SERVICE: ${{ env.SERVICE }}
           FIREBASE_PROJECT_ID: ${{ env.FIREBASE_PROJECT_ID }}
           CORS_ORIGINS: ${{ env.CORS_ORIGINS }}
+          DEFAULT_WALLET_CURRENCY: ${{ env.DEFAULT_WALLET_CURRENCY }}
           GCLOUD: gcloud
           SKIP_GCP_SERVICE_ENABLE: "1"
           SKIP_ARTIFACT_REPOSITORY_CREATE: "1"
           SKIP_SECRET_UPSERT: "1"
-        run: npm run deploy:cloud-run
+        run: |
+          export APP_ENV=production
+          export SERVICE=wise-api
+          export DATABASE_URL_SECRET=DATABASE_URL
+          export WEBHOOK_SIGNATURE_SECRET_NAME=WEBHOOK_SIGNATURE_SECRET
+          npm run deploy:cloud-run

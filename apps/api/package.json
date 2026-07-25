@@ -6,7 +6,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "DOTENV_CONFIG_PATH=../../.env tsx watch src/main.ts",
+    "dev": "APP_ENV=local WISE_ENV_FILE=../../.env tsx watch src/main.ts",
     "start": "node dist/main.js"
   },
   "dependencies": {

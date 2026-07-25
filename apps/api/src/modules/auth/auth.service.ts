@@ -26,6 +26,7 @@ export class AuthService {
   constructor(
     private readonly db: Database,
     private readonly tokenVerifier: FirebaseTokenVerifier,
+    private readonly defaultWalletCurrency = 'SSP',
   ) {}
 
   async authenticate(authorizationHeader: string | undefined): Promise<AuthContext> {
@@ -118,9 +119,9 @@ export class AuthService {
   private async ensureDefaultCustomerWallet(userId: string): Promise<void> {
     await this.db.query(
       `insert into wallet_accounts (owner_user_id, account_type, currency, status)
-       values ($1, 'CUSTOMER', 'SSP', 'ACTIVE')
+       values ($1, 'CUSTOMER', $2, 'ACTIVE')
        on conflict (owner_user_id, account_type, currency) do nothing`,
-      [userId],
+      [userId, this.defaultWalletCurrency],
     );
   }
 }
