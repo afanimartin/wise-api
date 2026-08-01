@@ -80,3 +80,27 @@ export class WalletAccountAccessDeniedError extends AppError {
     super('WALLET_ACCOUNT_ACCESS_DENIED', 'Wallet account does not belong to the authenticated user', 403);
   }
 }
+
+export class DemoBankNotFoundError extends AppError {
+  constructor() {
+    super('DEMO_BANK_NOT_FOUND', 'Demo bank was not found', 404);
+  }
+}
+
+export class DemoBankAccountNotFoundError extends AppError {
+  constructor() {
+    super('DEMO_BANK_ACCOUNT_NOT_FOUND', 'Demo bank account was not found', 404);
+  }
+}
+
+export class DemoBankAccountUnavailableError extends AppError {
+  constructor() {
+    super('DEMO_BANK_ACCOUNT_UNAVAILABLE', 'Demo bank account is not available', 409);
+  }
+}
+
+export class DemoBankInsufficientFundsError extends AppError {
+  constructor() {
+    super('DEMO_BANK_INSUFFICIENT_FUNDS', 'Demo bank account has insufficient funds', 409);
+  }
+}

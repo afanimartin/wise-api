@@ -29,6 +29,14 @@ const fundWalletSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+const bankDepositSchema = z.object({
+  demoBankAccountId: z.string().uuid(),
+  walletAccountId: z.string().uuid(),
+  amountMinor: z.string().regex(/^[1-9][0-9]*$/),
+  currency: z.string().min(3).max(8),
+  referenceId: z.string().min(1).default(() => randomUUID()),
+});
+
 export async function walletRoutes(app: FastifyInstance): Promise<void> {
   app.get('/accounts', { preHandler: app.authenticate }, async (request, reply) => {
     if (!request.auth) {
@@ -94,6 +102,47 @@ export async function walletRoutes(app: FastifyInstance): Promise<void> {
     const ledgerService = new LedgerService(request.server.db);
 
     const response = await ledgerService.transferFunds({
+      authenticatedUserId: request.auth.userId,
+      idempotencyKey,
+      requestHash,
+      ...body,
+    });
+
+    return reply.status(response.idempotentReplay ? 200 : 201).send({
+      data: response,
+      meta: {
+        idempotencyKey,
+        requestHash,
+      },
+    });
+  });
+
+  app.post('/deposits/bank', { preHandler: app.authenticate }, async (request, reply) => {
+    if (!request.auth) {
+      return reply.status(401).send({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+        },
+      });
+    }
+    requirePermission(request.auth, 'wallet:deposit:bank');
+
+    const idempotencyKey = request.headers['idempotency-key'];
+    if (typeof idempotencyKey !== 'string' || idempotencyKey.length < 8) {
+      return reply.status(400).send({
+        error: {
+          code: 'MISSING_IDEMPOTENCY_KEY',
+          message: 'Idempotency-Key header is required',
+        },
+      });
+    }
+
+    const body = bankDepositSchema.parse(request.body);
+    const requestHash = hashRequestBody(body);
+    const ledgerService = new LedgerService(request.server.db);
+
+    const response = await ledgerService.depositFromDemoBank({
       authenticatedUserId: request.auth.userId,
       idempotencyKey,
       requestHash,

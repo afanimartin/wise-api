@@ -4,6 +4,9 @@ export const DEFAULT_CUSTOMER_PERMISSIONS = [
   'wallet:read:own',
   'wallet:create:own',
   'transfer:create',
+  'bank:read:demo',
+  'bank:link:demo',
+  'wallet:deposit:bank',
 ] as const;
 
 export const ADMIN_PERMISSIONS = [

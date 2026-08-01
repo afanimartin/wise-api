@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import {
   CurrencyMismatchError,
+  DemoBankAccountNotFoundError,
+  DemoBankAccountUnavailableError,
+  DemoBankInsufficientFundsError,
   DuplicateRequestInProgressError,
   IdempotencyConflictError,
   InsufficientFundsError,
@@ -57,6 +60,30 @@ export type FundWalletResponse = {
   idempotentReplay: boolean;
 };
 
+export type DepositFromDemoBankInput = {
+  authenticatedUserId: string;
+  idempotencyKey: string;
+  requestHash: string;
+  demoBankAccountId: string;
+  walletAccountId: string;
+  amountMinor: string;
+  currency: string;
+  referenceId: string;
+};
+
+export type DepositFromDemoBankResponse = {
+  transactionId: string;
+  demoBankAccountId: string;
+  walletAccountId: string;
+  amountMinor: string;
+  currency: string;
+  referenceType: 'BANK_DEPOSIT';
+  referenceId: string;
+  bankBalanceMinor: string;
+  walletBalanceMinor: string;
+  idempotentReplay: boolean;
+};
+
 type AccountRow = {
   id: string;
   owner_user_id: string;
@@ -66,6 +93,14 @@ type AccountRow = {
 
 type BalanceRow = {
   balance_minor: string | number;
+};
+
+type DemoBankAccountRow = {
+  id: string;
+  owner_user_id: string;
+  currency: string;
+  balance_minor: string | number;
+  status: string;
 };
 
 type IdempotencyRow = {
@@ -78,6 +113,104 @@ type IdempotencyRow = {
 
 export class LedgerService {
   constructor(private readonly db: Database) {}
+
+  async depositFromDemoBank(
+    input: DepositFromDemoBankInput,
+  ): Promise<DepositFromDemoBankResponse> {
+    return this.db.transaction(async (tx) => {
+      const replay = await this.prepareIdempotency<DepositFromDemoBankResponse>(
+        tx,
+        input.idempotencyKey,
+        input.requestHash,
+      );
+      if (replay) {
+        return {
+          ...replay,
+          idempotentReplay: true,
+        };
+      }
+
+      const demoBankAccount = await this.lockDemoBankAccount(tx, input.demoBankAccountId);
+      if (!demoBankAccount || demoBankAccount.owner_user_id !== input.authenticatedUserId) {
+        throw new DemoBankAccountNotFoundError();
+      }
+
+      if (demoBankAccount.status !== 'ACTIVE') {
+        throw new DemoBankAccountUnavailableError();
+      }
+
+      const walletAccounts = await this.lockAccounts(tx, [input.walletAccountId]);
+      const walletAccount = walletAccounts.get(input.walletAccountId);
+      if (!walletAccount) {
+        throw new WalletAccountNotFoundError();
+      }
+
+      if (walletAccount.owner_user_id !== input.authenticatedUserId) {
+        throw new WalletAccountAccessDeniedError();
+      }
+
+      if (walletAccount.status !== 'ACTIVE') {
+        throw new WalletAccountUnavailableError();
+      }
+
+      if (demoBankAccount.currency !== input.currency || walletAccount.currency !== input.currency) {
+        throw new CurrencyMismatchError();
+      }
+
+      const amountMinor = BigInt(input.amountMinor);
+      const bankBalanceMinor = BigInt(String(demoBankAccount.balance_minor));
+      if (bankBalanceMinor < amountMinor) {
+        throw new DemoBankInsufficientFundsError();
+      }
+
+      const walletBalanceMinor = await this.getBalanceMinor(tx, input.walletAccountId);
+      const transactionId = randomUUID();
+      const metadata = {
+        demoBankAccountId: input.demoBankAccountId,
+        idempotencyKey: input.idempotencyKey,
+      };
+
+      await tx.query(
+        `update demo_bank_accounts
+         set balance_minor = balance_minor - $2,
+             updated_at = now()
+         where id = $1`,
+        [input.demoBankAccountId, input.amountMinor],
+      );
+
+      await tx.query(
+        `insert into wallet_transaction_ledger
+          (transaction_id, account_id, owner_user_id, entry_type, amount_minor, currency, reference_type, reference_id, metadata)
+         values ($1, $2, $3, 'CREDIT', $4, $5, 'BANK_DEPOSIT', $6, $7::jsonb)`,
+        [
+          transactionId,
+          walletAccount.id,
+          walletAccount.owner_user_id,
+          input.amountMinor,
+          input.currency,
+          input.referenceId,
+          JSON.stringify(metadata),
+        ],
+      );
+
+      const response: DepositFromDemoBankResponse = {
+        transactionId,
+        demoBankAccountId: input.demoBankAccountId,
+        walletAccountId: input.walletAccountId,
+        amountMinor: input.amountMinor,
+        currency: input.currency,
+        referenceType: 'BANK_DEPOSIT',
+        referenceId: input.referenceId,
+        bankBalanceMinor: (bankBalanceMinor - amountMinor).toString(),
+        walletBalanceMinor: (walletBalanceMinor + amountMinor).toString(),
+        idempotentReplay: false,
+      };
+
+      await this.completeIdempotency(tx, input.idempotencyKey, 201, response);
+
+      return response;
+    });
+  }
 
   async fundWallet(input: FundWalletInput): Promise<FundWalletResponse> {
     return this.db.transaction(async (tx) => {
@@ -316,6 +449,21 @@ export class LedgerService {
     );
 
     return new Map(result.rows.map((row) => [row.id, row]));
+  }
+
+  private async lockDemoBankAccount(
+    tx: DbExecutor,
+    demoBankAccountId: string,
+  ): Promise<DemoBankAccountRow | null> {
+    const result = await tx.query<DemoBankAccountRow>(
+      `select id, owner_user_id, currency, balance_minor, status
+       from demo_bank_accounts
+       where id = $1
+       for update`,
+      [demoBankAccountId],
+    );
+
+    return result.rows[0] ?? null;
   }
 
   private async getBalanceMinor(tx: DbExecutor, accountId: string): Promise<bigint> {

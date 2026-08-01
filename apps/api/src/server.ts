@@ -10,6 +10,7 @@ import {
   createFirebaseTokenVerifier,
   type FirebaseTokenVerifier,
 } from './modules/auth/firebase-token-verifier.js';
+import { demoBankRoutes } from './modules/demo-banking/demo-bank.routes.js';
 import { healthRoutes } from './modules/health/health.routes.js';
 import { walletRoutes } from './modules/wallet/wallet.routes.js';
 import { createDatabase } from './shared/db/database.js';
@@ -68,6 +69,7 @@ export async function buildApp(
   registerErrorHandler(app);
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(authRoutes, { prefix: '/auth' });
+  await app.register(demoBankRoutes, { prefix: '/demo' });
   await app.register(walletRoutes, { prefix: '/wallet' });
 
   app.addHook('onClose', async (instance) => {

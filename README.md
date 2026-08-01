@@ -188,10 +188,66 @@ Every request must include:
 Idempotency-Key: unique-request-key
 ```
 
+## Demo Bank Funding API
+
+Demo bank routes require a Firebase ID token:
+
+```text
+Authorization: Bearer <firebase_id_token>
+```
+
+List the supported demo banks:
+
+```http
+GET /demo/banks
+```
+
+Link a simulated external bank account:
+
+```http
+POST /demo/bank-accounts
+```
+
+```json
+{
+  "bankCode": "KCB_SS",
+  "accountName": "Jane Deng",
+  "accountNumber": "123456789",
+  "currency": "SSP",
+  "openingBalanceMinor": "750000"
+}
+```
+
+List linked demo bank accounts:
+
+```http
+GET /demo/bank-accounts
+```
+
+Move money from a linked demo bank account into the user's Wise wallet:
+
+```http
+POST /wallet/deposits/bank
+Idempotency-Key: bank-deposit-<unique-key>
+```
+
+```json
+{
+  "demoBankAccountId": "uuid",
+  "walletAccountId": "uuid",
+  "amountMinor": "125000",
+  "currency": "SSP"
+}
+```
+
+This is a demo-only funding path. The simulated bank balance is debited and the Wise wallet is credited through the wallet ledger in one database transaction.
+
 Before deploying auth-protected transfers, run all migrations against Cloud SQL, including:
 
 ```text
 packages/database/migrations/0002_app_users.sql
+packages/database/migrations/0003_app_user_permissions.sql
+packages/database/migrations/0004_demo_bank_accounts.sql
 ```
 
 ## Architecture
